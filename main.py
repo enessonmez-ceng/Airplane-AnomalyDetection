@@ -2,7 +2,7 @@ import requests
 import json
 import time
 import logging
-
+from summarizer import generate_report
 from rich.table import Table
 from rich.live import Live
 
@@ -10,6 +10,14 @@ base_url = "https://opendata.adsb.fi/api/"
 west_Turkey = "/v3/lat/40.0/lon/29.0/dist/250"
 middle_Turkey = "/v3/lat/38.5/lon/34.0/dist/250"
 east_Turkey = "/v3/lat/39.0/lon/41.0/dist/250"
+Greece       = "/v3/lat/39.0/lon/22.0/dist/250"   # Yunanistan, Ege
+Romania      = "/v3/lat/44.0/lon/25.0/dist/250"   # Romanya, Bulgaristan
+Black_sea    = "/v3/lat/46.5/lon/33.0/dist/250"   # Ukrayna, Kırım
+Caucasus     = "/v3/lat/43.0/lon/43.0/dist/250"   # Gürcistan, Ermenistan
+Azerbaijan   = "/v3/lat/38.0/lon/50.0/dist/250"   # Azerbaycan, KD İran
+Syria        = "/v3/lat/34.0/lon/36.0/dist/250"   # Suriye, Lübnan, Kıbrıs
+Iraq         = "/v3/lat/34.0/lon/44.0/dist/250"   # Irak, Batı İran
+Egypt        = "/v3/lat/30.0/lon/31.0/dist/250"   # Mısır, Doğu Akdeniz
 
 
 class JSONLOG(logging.Formatter):
@@ -45,12 +53,28 @@ def get_logger():
 
 def api_request():
     try:
-        west = requests.get(f"{base_url}{west_Turkey}").json()['ac']
+        west_turkey = requests.get(f"{base_url}{west_Turkey}").json()['ac']
         time.sleep(1.5)
-        middle = requests.get(f"{base_url}{middle_Turkey}").json()['ac']
+        middle_turkey = requests.get(f"{base_url}{middle_Turkey}").json()['ac']
         time.sleep(1.5)
-        east = requests.get(f"{base_url}{east_Turkey}").json()['ac']
-        data = west + middle + east
+        east_turkey = requests.get(f"{base_url}{east_Turkey}").json()['ac']
+        time.sleep(1.5)
+        greece       = requests.get(f"{base_url}{Greece}").json()['ac']
+        time.sleep(1.5)
+        romania      = requests.get(f"{base_url}{Romania}").json()['ac']
+        time.sleep(1.5)
+        black_sea    = requests.get(f"{base_url}{Black_sea}").json()['ac']
+        time.sleep(1.5)
+        caucasus     = requests.get(f"{base_url}{Caucasus}").json()['ac']
+        time.sleep(1.5)
+        azerbaijan   = requests.get(f"{base_url}{Azerbaijan}").json()['ac']
+        time.sleep(1.5)
+        syria        = requests.get(f"{base_url}{Syria}").json()['ac']
+        time.sleep(1.5)
+        iraq         = requests.get(f"{base_url}{Iraq}").json()['ac']
+        time.sleep(1.5)
+        egypt        = requests.get(f"{base_url}{Egypt}").json()['ac']
+        data = west_turkey + middle_turkey + east_turkey + greece + romania + black_sea + caucasus + azerbaijan + syria + iraq + egypt
     except requests.RequestException as e:
         logging.error(f"Error fetching API data: {e}")
         data = []
@@ -78,19 +102,17 @@ def generate_table(data):
 
     return table
 
-def live_table():
-    with Live(generate_table(), refresh_per_second=1) as live:
-        while True:
-            time.sleep(5)
-            live.update(generate_table())
+def render_table(data):
+    table = generate_table(data)
+    return table
 
 
-
-def anomaly_detection(data):
+def load_config():
     with open('config.json') as f:
         config = json.load(f)
-    speed_threshold = config.get("speed_threshold", 100)
-    altitude_threshold = config.get("altitude_threshold", 10000)
+    return config
+
+def anomaly_detection(data, config):
     
     anomalies = []
 
@@ -104,17 +126,31 @@ def anomaly_detection(data):
             "ground_speed": plane.get("gs", 'N/A')
         }
 
-        if plane.get('gs',0) > speed_threshold:
+        if plane.get('gs',0) > config.get("speed_threshold"):
             anomalies.append([plane_features, "speed threshold exceeded"])
-        elif plane.get("lat",0) > config.get("lat_max") or plane.get("lat",0) < config.get("lat_min") or plane.get("lon",0) > config.get("lon_max") or plane.get("lon",0) < config.get("lon_min"):
-            anomalies.append([plane_features, "Plane not in İstanbul airspace"])
-        elif plane.get("seen",0) > config.get("last_signal_threshold"):
+        if plane.get("lat",0) > config.get("lat_max") or plane.get("lat",0) < config.get("lat_min") or plane.get("lon",0) > config.get("lon_max") or plane.get("lon",0) < config.get("lon_min"):
+            anomalies.append([plane_features, "Plane not in Turkish airspace"])
+        if plane.get("seen",0) > config.get("last_signal_threshold"):
             anomalies.append([plane_features, "Plane has not been seen for a 30 seconds"])                                      
         else:
             continue
     
     for anomaly in anomalies:
         get_logger().info("Anomaly detected", extra={"anomalies": anomaly})
-        
 
     return anomalies
+
+def main():
+    data = api_request()
+    config = load_config()
+
+    with Live(refresh_per_second=1) as live:
+        while True:
+            data = api_request()
+            anomalies = anomaly_detection(data, config)
+            live.update(render_table(data))
+            time.sleep(4)
+    generate_report()
+
+if __name__ == "__main__":
+    main()          

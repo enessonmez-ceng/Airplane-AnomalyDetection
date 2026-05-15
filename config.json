@@ -1,0 +1,8 @@
+{
+    "speed_threshold": 100,
+    "lat_max": 42.2,
+    "lat_min": 35.8,
+    "lon_max": 44.8,
+    "lon_min": 26.0,
+    "last_signal_threshold": 30
+}

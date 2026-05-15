@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ baslik }}</title>
+    <style>
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #4CAF50; color: white; }
+    </style>
+</head>
+<body>
+    <h1>{{ baslik }}</h1>
+    <p>Oluşturulma Tarihi: {{ tarih }}</p>
+    <p>Toplam Anomali: {{ total_anomalies }}</p>
+    <p>Speed Anomalies: {{ speed_anomalies }}</p>
+    <p>Location Anomalies: {{ location_anomalies }}</p>
+    <p>Signal Anomalies: {{ signal_anomalies }}</p>
+
+    <!-- Python'dan gelen bir listeyi döngüye sokuyoruz -->
+    <h3>Report</h3>
+    <table>
+        <tr>
+            <th>Flight</th>
+            <th>Description</th>
+            <th>latitude</th>
+            <th>longitude</th>
+            <th>ground_speed</th>
+            <th>anomaly</th>
+        </tr>
+        {% for anomaly in anomalies %}
+        <tr>
+            <td>{{ anomaly['flight'] }}</td>
+            <td>{{ anomaly['description'] }}</td>
+            <td>{{ anomaly['latitude'] }}</td>
+            <td>{{ anomaly['longitude'] }}</td>
+            <td>{{ anomaly['ground_speed'] }}</td>
+            <td>{{ anomaly['anomaly_reason'] }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</html>
